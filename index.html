@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AI or Real? — Mini Test</title>
+<style>
+  :root{ --bg:#f4f7fb; --card:#fff; --accent:#2468f0; --muted:#6b7280; }
+  body{ margin:0; font-family:Inter,system-ui,Arial; background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+  .card{ width:min(760px,98%); background:var(--card); border-radius:14px; box-shadow:0 10px 30px rgba(20,30,60,0.08); padding:18px; }
+  header{ display:flex; align-items:center; justify-content:space-between; gap:12px }
+  h1{ margin:0; font-size:20px }
+  .meta{ color:var(--muted); font-size:13px }
+  .image-wrap{ margin:18px 0; display:flex; align-items:center; justify-content:center; min-height:360px; border-radius:10px; overflow:hidden; background:linear-gradient(180deg,#eef4ff,#fff) }
+  .image-wrap img{ max-width:100%; max-height:100%; display:block; object-fit:contain; }
+  .controls{ display:flex; gap:10px; justify-content:center; margin-bottom:8px }
+  button{ padding:10px 14px; border-radius:10px; border:0; cursor:pointer; font-weight:600 }
+  .ai{ background:#e8f0ff; color:var(--accent); border:1px solid rgba(36,104,240,0.12) }
+  .real{ background:#fff4e6; color:#d35400; border:1px solid rgba(211,84,0,0.08) }
+  .next{ background:var(--accent); color:#fff }
+  .result{ text-align:center; margin:8px 0; font-weight:700 }
+  .score{ position:relative; display:flex; gap:10px; align-items:center }
+  .add-form{ margin-top:14px; border-top:1px dashed #e6eef9; padding-top:12px; display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center }
+  input[type="text"]{ padding:8px 10px; border-radius:8px; border:1px solid #e6eef9; width:100% }
+  select{ padding:8px 10px; border-radius:8px; border:1px solid #e6eef9 }
+  small{ display:block; color:var(--muted); margin-top:6px }
+</style>
+</head>
+<body>
+  <div class="card" role="application" aria-label="AI or Real Test">
+    <header>
+      <div>
+        <h1>AI or Real?</h1>
+        <div class="meta">Look at the image — then choose what you think is correct.</div>
+      </div>
+      <div class="score">
+        <div class="meta">Correct: <strong id="correct">0</strong></div>
+        <div class="meta">Wrong: <strong id="wrong">0</strong></div>
+      </div>
+    </header>
+
+    <div class="image-wrap" id="imageWrap" aria-live="polite">
+      <img id="mainImage" alt="Test image" src="" />
+    </div>
+
+    <div class="controls" role="group" aria-label="Options">
+      <button id="btnAI" class="ai">AI Generated</button>
+      <button id="btnReal" class="real">Real Photo</button>
+    </div>
+
+    <div style="text-align:center">
+      <button id="btnNext" class="next">Next Image</button>
+    </div>
+
+    <div class="result" id="resultText" aria-live="polite"></div>
+
+    <form id="addForm" class="add-form" onsubmit="return false;">
+      <input id="imgUrl" type="text" placeholder="Image URL (https://...)" aria-label="Image URL" />
+      <select id="imgLabel" aria-label="Label">
+        <option value="ai">AI Generated</option>
+        <option value="real">Real Photo</option>
+      </select>
+      <button id="addBtn" style="grid-column:2/3; margin-top:6px; padding:8px 10px; border-radius:8px; background:#10b981; color:white; border:0">Add</button>
+      <small>You can expand the test set by adding image URLs.</small>
+    </form>
+  </div>
+
+<script>
+const images = [
+  { url: 'https://picsum.photos/seed/ai1/1200/800', label:'ai' },
+  { url: 'https://picsum.photos/seed/ai2/1200/800', label:'ai' },
+  { url: 'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?q=80&w=1200&auto=format&fit=crop', label:'real' },
+  { url: 'https://images.unsplash.com/photo-1558980664-10b0e1c8b1ec?q=80&w=1200&auto=format&fit=crop', label:'real' }
+];
+
+let currentIndex = -1;
+let correct = 0, wrong = 0;
+const mainImage = document.getElementById('mainImage');
+const resultText = document.getElementById('resultText');
+const correctEl = document.getElementById('correct');
+const wrongEl = document.getElementById('wrong');
+
+function pickRandom() {
+  if (images.length === 0) {
+    mainImage.src = '';
+    resultText.textContent = 'No images available. Please add one.';
+    return;
+  }
+  let idx;
+  do { idx = Math.floor(Math.random()*images.length); } while(idx === currentIndex && images.length>1);
+  currentIndex = idx;
+  mainImage.src = images[currentIndex].url;
+  mainImage.alt = 'Test image ' + (currentIndex+1);
+  resultText.textContent = '';
+}
+
+document.getElementById('btnAI').addEventListener('click', ()=> evaluate('ai'));
+document.getElementById('btnReal').addEventListener('click', ()=> evaluate('real'));
+document.getElementById('btnNext').addEventListener('click', pickRandom);
+
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const url = document.getElementById('imgUrl').value.trim();
+  const label = document.getElementById('imgLabel').value;
+  if(!url) { alert('Please enter an image URL.'); return; }
+  images.push({ url, label });
+  document.getElementById('imgUrl').value = '';
+  currentIndex = images.length - 1;
+  mainImage.src = url;
+  resultText.textContent = 'Image added — now make a guess!';
+});
+
+function evaluate(choice) {
+  if (currentIndex < 0 || !images[currentIndex]) {
+    resultText.textContent = 'No image loaded yet.';
+    return;
+  }
+  const realLabel = images[currentIndex].label;
+  if (choice === realLabel) {
+    correct++;
+    resultText.textContent = '✅ Correct! It is ' + (realLabel==='ai'? 'AI-generated' : 'Real');
+  } else {
+    wrong++;
+    resultText.textContent = '❌ Wrong. It is actually ' + (realLabel==='ai'? 'AI-generated' : 'Real');
+  }
+  correctEl.textContent = correct;
+  wrongEl.textContent = wrong;
+}
+
+pickRandom();
+
+window.addEventListener('keydown', (e)=>{
+  if (e.key.toLowerCase() === 'a') evaluate('ai');
+  if (e.key.toLowerCase() === 'r') evaluate('real');
+  if (e.key.toLowerCase() === 'n') pickRandom();
+});
+</script>
+</body>
+</html>
